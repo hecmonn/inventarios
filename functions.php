@@ -6,17 +6,8 @@ function demanda_promedio(array $demanda){
 function pretty_number($number){
     return number_format($number,2,'.','');
 }
-
-function demanda_promedio_lt($dp,$tao){
-    return $dp*$tao;
-}
-
 function eoq_periodo($a,$d,$h){
     return sqrt((2*$a*$d)/$h);
-}
-
-function costo_eoq(array $datos){
-    //costo modelo eoq
 }
 function std_deviation(array $a, $sample = false) {
     $n = count($a);
@@ -47,9 +38,18 @@ function modelo_eoq(array $datos){
     $demanda_prom=demanda_promedio($datos["demanda"]);
     $demanda_24=$demanda_prom*24;
     $q_asterico=eoq_periodo($a,$demanda_24,$h);
-    $t_modelo=$q_asterico/$demanda_24;
+    $t_modelo=pretty_number($q_asterico/$demanda_24);
     $f_modelo=1/$t_modelo;
-    $modelo_eoq=["q"=>$q_asterico,"t"=>$t_modelo,"f"=>$f_modelo];
+    $costos=costos(["demanda_prom"=>$demanda_prom,"costo_unidad"=>$c,"ret"=>$datos["ret"],"costo_pedido"=>$a,"q"=>$q_asterico]);
+    $modelo_eoq=[
+        "nombre"=>"eoq",
+        "q"=>$q_asterico,
+        "t"=>$t_modelo,
+        "f"=>$f_modelo,
+        "costo_pedido"=>$costos["pedido"],
+        "costo_retencion"=>$costos["retencion"],
+        "costo_total"=>$costos["total"]
+    ];
     return $modelo_eoq;
 }
 function cme(array $datos){
@@ -73,7 +73,7 @@ function modelo_qr(array $datos){
     $tao=(float)$datos["lt"];
     $fill_rate=(float)$datos["fr"];
     $sigma_dem=pretty_number(std_deviation($datos["demanda"],true));
-    $demanda_prom=demanda_promedio($datos["demanda"]);
+    $demanda_prom=pretty_number(demanda_promedio($datos["demanda"]));
     $demanda_tao=pretty_number($demanda_prom*$tao);
     $sigma_tao=pretty_number($sigma_dem*sqrt($tao));
     $q=ceil(sqrt((2*$a*$demanda_prom)/$h));
@@ -117,7 +117,6 @@ function modelo_qr(array $datos){
     ];
     return $modelo_qr;
 }
-
 function costos(array $datos){
     //Costo anual
     $q=$datos["q"];
@@ -137,7 +136,7 @@ function promedios_moviles(array $datos){
         $mt=($demanda[$i]+$demanda[$i+1])/2;
         $mt_arr[$i]=$mt;
     }
-    for ($i=0; $i < count($mt_arr)-1 ; $i++) {
+    for ($i=0; $i < count($mt_arr) ; $i++) {
         $ft=$mt_arr[$i];
         $ft_arr[$i]=$ft;
     }
@@ -153,7 +152,7 @@ function promedios_moviles(array $datos){
     $cme_2=cme($et_arr);
     $n2=[$mt_arr,$ft_arr,$et_arr];
     //N=3
-    for ($i=0; $i < count($demanda) ; $i++) {
+    for ($i=0; $i < count($demanda)-2 ; $i++) {
         $mt=($demanda[$i]+$demanda[$i+1]+$demanda[$i+2])/3;
         $mt_arr_3[$i]=$mt;
     }
@@ -175,7 +174,8 @@ function promedios_moviles(array $datos){
     $cme_3=cme($et_arr_3);
     $n3=[$mt_arr_3,$ft_arr_3,$et_arr_3];
     //N=5
-    for ($i=0; $i < count($demanda) ; $i++) {
+    for ($i=0; $i < count($demanda)-4 ; $i++) {
+        //die(var_dump(count($demanda)));
         $mt=($demanda[$i]+$demanda[$i+1]+$demanda[$i+2]+$demanda[$i+3]+$demanda[$i+4])/5;
         $mt_arr_5[$i]=$mt;
     }
@@ -227,19 +227,27 @@ function promedios_moviles(array $datos){
     $mape_3=array_sum($etdt_arr_3)/(count($etdt_arr_3));
     $mape_5=array_sum($etdt_arr_5)/(count($etdt_arr_5));
     if($mape<$mape_3 && $mape < $mape_5)
-        $mape_final=["nombre"=>"promedios moviles","mape"=>$mape,"mt"=>$mt_arr,"ft"=>$ft_arr,"et"=>$et_arr,"etdt"=>$etdt_arr,"cme"=>$cme];
+        $mape_final=["nombre"=>"promedios moviles bimestral","mape"=>$mape,"mt"=>$mt_arr,"ft"=>$ft_arr,"et"=>$et_arr,"etdt"=>$etdt_arr,"cme"=>$cme,"n"=>2];
     elseif($mape_3 <$mape && $mape_3<$mape_5)
-        $mape_final=["nombre"=>"promedios moviles","mape"=>$mape_3,"mt"=>$mt_arr_3,"ft"=>$ft_arr_3,"et"=>$et_arr_3,"etdt"=>$etdt_arr_3,"cme"=>$cme_3];
+        $mape_final=["nombre"=>"promedios moviles trimestral","mape"=>$mape_3,"mt"=>$mt_arr_3,"ft"=>$ft_arr_3,"et"=>$et_arr_3,"etdt"=>$etdt_arr_3,"cme"=>$cme_3,"n"=>3];
     elseif($mape_5 <$mape && $mape_5<$mape_3)
-        $mape_final=["nombre"=>"promedios moviles","mape"=>$mape_5,"mt"=>$mt_arr_5,"ft"=>$ft_arr_5,"et"=>$et_arr_5,"etdt"=>$etdt_arr_5,"cme"=>$cme_5];
-    return $mape_final;
+        $mape_final=["nombre"=>"promedios moviles quinquemestral","mape"=>$mape_5,"mt"=>$mt_arr_5,"ft"=>$ft_arr_5,"et"=>$et_arr_5,"etdt"=>$etdt_arr_5,"cme"=>$cme_5,"n"=>5];
 
+    //Pronostico futuro
+    $mt=$mape_final["mt"];
+    for ($i=0; $i < 13; $i++) {
+        $temp=array_slice($mt,-$mape_final["n"]);
+        $pronostico_i=array_sum($temp)/count($temp);
+        $mt[]=$pronostico_i;
+    }
+    $mape_final["mt"]=$mt;
+    return $mape_final;
 }
 function suavizacion_exp(array $datos){
     $demanda=$datos["demanda"];
-    $alpha=$datos["alpha"];
+    $alpha=$datos["ret"];
     for ($i=0; $i < count($demanda) ; $i++) {
-        $st=$i==0?$demanda[$i]:($alpha*$demanda[$i]+(1-$alpha)*$demanda[$i-1]);
+        $st=$i==0?$demanda[$i]:($alpha*$demanda[$i]+(1-$alpha)*$st_arr[$i-1]);
         $st_arr[$i]=$st;
     }
     for ($i=0; $i < count($st_arr) ; $i++) {
@@ -254,10 +262,25 @@ function suavizacion_exp(array $datos){
         $etdt=abs($et_arr[$i]/$demanda[$i]);
         $etdt_arr[$i]=$etdt;
     }
+    //Pronostico futuro
+    //pronostico[-1]+(alpha*(pronostico[-1]-demanda[-1]));
+    (int)$dem_cnt=count($demanda);
+    $st_last=(array_slice($st_arr,-1));
+    $dem_last=(array_slice($st_arr,-1));
+    for ($i=$dem_cnt; $i < $dem_cnt+12 ; $i++) {
+        if($i==$dem_cnt){
+            $st=array_shift(array_slice($st_arr,-1));
+            $dem=array_shift(array_slice($demanda,-1));
+            $mt=$st+($alpha*($st-$dem));
+        } else {
+            $mt=$st_arr[$i-1]+($alpha*(-$st_arr[$i-1]));
+            $temp=$alpha*(-$st_arr[$i-1]);
+        }
+        $st_arr[]=$mt;
+    }
     $cme=cme($et_arr);
     $mape=array_sum($etdt_arr)/(count($etdt_arr)-1);
-    return ["nombre"=>"suavizacion exponencial","mape"=>$mape,"st"=>$st_arr,"ft"=>$ft_arr,"et"=>$et_arr,"etdt"=>$etdt_arr,"cme"=>$cme];
-
+    return ["nombre"=>"suavizacion exponencial","mape"=>$mape,"mt"=>$st_arr,"ft"=>$ft_arr,"et"=>$et_arr,"etdt"=>$etdt_arr,"cme"=>$cme];
 }
 function qr_table(array $datos){
     $net_invertory=$datos["q"];
@@ -270,7 +293,11 @@ function qr_table(array $datos){
     }
 }
 function correr_modelo(array $datos){
-    $modelo_qr=modelo_qr($datos);
+    if(empty($datos["lt"]) || empty($datos["fr"]) || empty($datos["alpha"])){
+        $modelo=modelo_eoq($datos);
+    } else{
+        $modelo=modelo_qr($datos);
+    }
     $promedios_moviles=promedios_moviles($datos);
     $suavizacion_exp=suavizacion_exp($datos);
     if($promedios_moviles["mape"]>$suavizacion_exp["mape"]){
@@ -278,6 +305,6 @@ function correr_modelo(array $datos){
     } else {
         $pronostico=$promedios_moviles;
     }
-    return ["modelo"=>$modelo_qr,"pronostico"=>$pronostico];
+    return ["modelo"=>$modelo,"pronostico"=>$pronostico];
 }
 ?>

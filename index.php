@@ -26,15 +26,16 @@ require_once './header.php';
             <input type="number" step=".01" name="costo_unidad" class="form-control" required><br>
             <label for="">Interes</label>
             <input type="number" step=".01" name="interes" class="form-control" required><br>
+            <label for="">Nivel de retención</label>
+            <input type="number" step=".01" name="ret" class="form-control"><br>
+
             <p class="text-muted">Ingresar los siguientes datos si se cuenta con ellos</p>
             <label for="">Lead Time</label>
-            <input type="number" step=".01" name="lt" class="form-control" required><br>
+            <input type="number" step=".01" name="lt" class="form-control"><br>
             <label for="">Fill Rate</label>
-            <input type="number" step=".01" name="fr" class="form-control" required><br>
+            <input type="number" step=".01" name="fr" class="form-control"><br>
             <label for="">Objetivo de nivel de servicio (CSL)</label>
-            <input type="number" step=".01" name="alpha" class="form-control" required><br>
-            <label for="">Nivel de retención</label>
-            <input type="number" step=".01" name="ret" class="form-control" required><br>
+            <input type="number" step=".01" name="alpha" class="form-control"><br>
             <input type="submit" name="submit" class="btn btn-success center-block btn-md" value="Calcular"><br>
         </form>
     </div>

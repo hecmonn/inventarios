@@ -1,6 +1,5 @@
 <?php
 require_once './functions.php';
-error_reporting(0);
 if(isset($_POST["submit"])){
     $dem_prom=demanda_promedio($_POST["demanda"]);
     $modelo_final=correr_modelo($_POST);
@@ -19,7 +18,7 @@ require_once './header.php'
         <h4 class="text-center">Modelo obtenido: <strong><?php echo strtoupper($modelo["nombre"]); ?></strong></h4><hr>
         <h4 class="text-center">Pronostico obtenido: <strong><?php echo strtoupper($pronostico["nombre"]); ?></strong></h4><hr>
         <div class="col-sm-5 col-sm-offset-1">
-            <h3>QR</h3>
+            <h3><?php echo strtoupper($modelo["nombre"]); ?></h3>
             <label for="">Demanda promedio: </label>
             <?php echo $modelo["demanda_promedio"]; ?><br>
             <label for="">Cantidad a pedir (Q):</label>
@@ -36,9 +35,18 @@ require_once './header.php'
             <?php echo $modelo["r_csl"]; ?><br>
             <label for="">Productos no surtidos: </label>
             <?php echo $modelo["no_surtidas"]; ?><br>
-        </div><br><br>
+        </div>
         <div class="col-sm-5 ">
-            <h4>Análisis de costos</h4>
+            <h4>Datos proporcionados</h4>
+            <label for="">Costo por pedir(A): </label>
+            $<?php echo $_POST["costo_pedido"]; ?><br>
+            <label for="">Costo por unidad (C): </label>
+            $<?php echo $_POST["costo_unidad"]; ?><br>
+            <label for="">Interes mensual: </label>
+            <?php echo $_POST["interes"]*100; ?>%<br>
+            <label for="">Porcentaje de retencion: </label>
+            <?php echo $_POST["ret"]*100; ?>%<br>
+            <h4>Análisis de costos anual</h4>
             <label for="">Costo por pedido:</label>
             $<?php echo $modelo["costo_pedido"]; ?><br>
             <label for="">Costo por retención:</label>
@@ -46,16 +54,35 @@ require_once './header.php'
             <label for="">Costo total:</label>
             $<?php echo $modelo["costo_total"]; ?>
         </div>
-    </div>
+    </div><hr>
     <div class="row">
         <div class="col-sm-5 col-sm-offset-1">
             <h3>Pronosticos</h3>
+            <table class="table table-striped">
+                <tr>
+                    <th>Periodo</th>
+                    <th>Cantidad</th>
+                </tr>
+                <?php
+                    $output="";
+                    $forecast=array_slice($pronostico["mt"],-12,null,true);
+                    foreach ($forecast as $key => $value){
+                        $cantidad=ceil($value);
+                        $periodo=$key+1;
+                        $output.= "<tr><td>{$periodo}</td>";
+                        $output.="<td>{$cantidad}</td></tr>";
+                    }
+                    echo $output;
+                ?>
+
+            </table>
+        </div>
+        <div class="col-sm-5 ">
+            <br><br><br>
             <label for="">MAPE:</label>
             <?php echo pretty_number($pronostico["mape"]*100); ?><br>
             <label for="">CME:</label>
             <?php echo pretty_number($pronostico["cme"]); ?>
-        </div>
-        <div class="col-sm-5 ">
         </div>
     </div>
 
